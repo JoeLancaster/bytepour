@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/joelancaster/bytepour/bencode/aot/testdata"
-	"github.com/joelancaster/bytepour/metainfo"
+	"github.com/joelancaster/bytepour/pkg/bencode/aot/testdata"
+	"github.com/joelancaster/bytepour/pkg/metainfo"
 
 	jackpal "github.com/jackpal/bencode-go"
 )

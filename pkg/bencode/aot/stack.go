@@ -1,6 +1,6 @@
 package aot
 
-import "github.com/joelancaster/bytepour/bencode/parse"
+import "github.com/joelancaster/bytepour/pkg/bencode/parse"
 
 const maxDepth = 256
 
@@ -19,6 +19,7 @@ func (s *stack) depth() int {
 
 func (s *stack) pop() {
 	s.sp--
+
 	if s.sp < 0 {
 		panic("negative stack pointer")
 	}

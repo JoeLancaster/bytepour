@@ -12,6 +12,8 @@ type MetaInfoPreCompute struct {
 	Announce []byte `bencode:"announce"`
 	// Optional free-form comment field.
 	Comment []byte `bencode:"comment"`
+	// Substring of the input that is the info dict.
+	InfoDict []byte `bencode:"-" json:"-"`
 	// The info dictionary, containing file info.
 	Info Info `bencode:"info"`
 }
@@ -36,6 +38,7 @@ func (a *MetaInfoPreCompute) Eq(b *MetaInfoPreCompute) bool {
 	}
 
 	return a.Info.Eq(&b.Info) &&
+		bytes.Equal(a.InfoDict, b.InfoDict) &&
 		bytes.Equal(a.Announce, b.Announce) &&
 		bytes.Equal(a.Comment, b.Comment)
 
@@ -56,10 +59,7 @@ func (a *Info) Eq(b *Info) bool {
 // String implements the stringer interface for
 // MetaInfoPreCompute. Debug use only.
 func (m *MetaInfoPreCompute) String() string {
-	s, err := json.Marshal(m)
-	if err != nil {
-		panic(s)
-	}
+	s, _ := json.Marshal(m)
 
 	return string(s)
 }

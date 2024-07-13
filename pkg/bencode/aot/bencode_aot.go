@@ -1,25 +1,13 @@
 package aot
 
 import (
-	"github.com/joelancaster/bytepour/bencode/parse"
-	"github.com/joelancaster/bytepour/metainfo"
+	"github.com/joelancaster/bytepour/pkg/bencode/parse"
+	"github.com/joelancaster/bytepour/pkg/metainfo"
 )
 
 // DecodeMetaInfoFile parses a bencode representation of a meta info file
 // a.k.a. .torrent files.
 func DecodeMetaInfoFile(mi *metainfo.MetaInfoPreCompute, p []byte) parse.Error {
-	integers := map[string]*uint64{
-		"length":       &mi.Info.Length,
-		"piece length": &mi.Info.PieceLength,
-	}
-
-	bstrings := map[string]*[]byte{
-		"announce": &mi.Announce,
-		"comment":  &mi.Comment,
-		"name":     &mi.Info.Name,
-		"pieces":   &mi.Info.Pieces,
-	}
-
 	const maxLength = 0x7FFFFFFE
 
 	var i uint32
@@ -38,6 +26,8 @@ func DecodeMetaInfoFile(mi *metainfo.MetaInfoPreCompute, p []byte) parse.Error {
 
 	var nextStr *[]byte
 	var nextInt *uint64
+
+	var startInfoDict, endInfoDict uint32
 
 	for i = 1; i < uint32(len(p)); {
 		numeric := (p[i] - '0') < 10
@@ -85,33 +75,61 @@ func DecodeMetaInfoFile(mi *metainfo.MetaInfoPreCompute, p []byte) parse.Error {
 				break
 			}
 
-			intElem, ok := integers[string(bs)]
-			if ok {
-				nextInt = intElem
+			if string(bs) == "info" && s.topType() == parse.Dict &&
+				s.depth() == 1 && p[i] == 'd' {
+				startInfoDict = i
+			}
+
+			if string(bs) == "length" {
+				nextInt = &mi.Info.Length
+				break
+			}
+
+			if string(bs) == "piece length" {
+				nextInt = &mi.Info.PieceLength
 				break
 			}
 
 			// this is a key
 			// possibly for an element we care about
-			strElem, ok := bstrings[string(bs)]
-			if ok {
-				nextStr = strElem
+			if string(bs) == "announce" {
+				nextStr = &mi.Announce
+				break
+			}
 
+			if string(bs) == "comment" {
+				nextStr = &mi.Comment
+				break
+			}
+			if string(bs) == "name" {
+				nextStr = &mi.Info.Name
+				break
+			}
+			if string(bs) == "pieces" {
+				nextStr = &mi.Info.Pieces
 				break
 			}
 
 			// Not something we care about, ignore it
 		case p[i] == 'e':
 			s.pop()
-			// it would be impossible to be in the info dict after popping
-			// from anything.
 			i++
+
+			if s.depth() == 1 && startInfoDict != 0 &&
+				endInfoDict == 0 {
+				endInfoDict = i
+			}
+
 		default:
-			// The input is malformed, or the parser is confused
-			// at any state of the parse, we expect one of the valid characters
+			// The input is malformed, or the parser is confused.
+			// At any state of the parse, we expect one of the valid characters
 			// that begins a term.
 			return parse.MakeError(parse.ErrConfusion, i, 0)
 		}
+	}
+
+	if startInfoDict != 0 && endInfoDict != 0 {
+		mi.InfoDict = p[startInfoDict:endInfoDict]
 	}
 
 	return parse.ErrOk
